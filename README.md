@@ -1,7 +1,7 @@
 
 # platform_file
 
-[![Pub Version (including pre-releases)](https://img.shields.io/pub/v/platform_file?include_prereleases)](https://pub.flutter-io.cn/packages/platform_file) [![GitHub license](https://img.shields.io/github/license/jeremaihloo/platform_file)](https://github.com/jeremaihloo/platform_file/blob/master/LICENSE) [![GitHub stars](https://img.shields.io/github/stars/jeremaihloo/platform_file?style=social)](https://github.com/jeremaihloo/platform_file/stargazers)
+[![Pub Version (including pre-releases)](https://img.shields.io/pub/v/platform_file?include_prereleases)](https://pub.flutter-io.cn/packages/platform_file) [![GitHub license](https://img.shields.io/github/license/jiejie-dev/platform_file)](https://github.com/jiejie-dev/platform_file/blob/master/LICENSE) [![GitHub stars](https://img.shields.io/github/stars/jiejie-dev/platform_file?style=social)](https://github.com/jiejie-dev/platform_file/stargazers)
 
 An abstraction to allow working with files across multiple platforms.
 
