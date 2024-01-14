@@ -2,6 +2,8 @@ library platform_file;
 
 /// copied from https://github.com/miguelpruivo/flutter_file_picker/blob/master/lib/src/platform_file.dart
 import 'dart:async';
+// ignore: unnecessary_import
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 

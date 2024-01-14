@@ -1,10 +1,10 @@
 name: platform_file
-description: A all platform file Flutter package.
-version: 0.0.1
+description: An abstraction to allow working with files across multiple platforms.
+version: 0.1.0
 homepage: https://github.com/jiejie-dev/flutter_platform_file
 
 environment:
-  sdk: ">=2.18.4 <3.0.0"
+  sdk: ">=2.18.4 <4.0.0"
   flutter: ">=1.17.0"
 
 dependencies:
