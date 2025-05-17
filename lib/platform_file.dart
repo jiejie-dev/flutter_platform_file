@@ -5,8 +5,6 @@ import 'dart:async';
 // ignore: unnecessary_import
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
-
 class PlatformFile {
   PlatformFile({
     String? path,
@@ -15,6 +13,7 @@ class PlatformFile {
     this.bytes,
     this.readStream,
     this.identifier,
+    this.isWeb = false,
   }) : _path = path;
 
   factory PlatformFile.fromMap(Map data, {Stream<List<int>>? readStream}) {
@@ -25,8 +24,11 @@ class PlatformFile {
       size: data['size'],
       identifier: data['identifier'],
       readStream: readStream,
+      isWeb: data['isWeb'] ?? false,
     );
   }
+
+  bool isWeb = false;
 
   /// The absolute path for a cached copy of this file. It can be used to create a
   /// file instance with a descriptor for the given path.
@@ -38,7 +40,7 @@ class PlatformFile {
   String? _path;
 
   String? get path {
-    if (kIsWeb) {
+    if (isWeb) {
       /// https://github.com/miguelpruivo/flutter_file_picker/issues/751
       throw '''
       On web `path` is always `null`,
@@ -82,7 +84,7 @@ class PlatformFile {
     }
 
     return other is PlatformFile &&
-        (kIsWeb || other.path == path) &&
+        (isWeb || other.path == path) &&
         other.name == name &&
         other.bytes == bytes &&
         other.readStream == readStream &&
@@ -92,7 +94,7 @@ class PlatformFile {
 
   @override
   int get hashCode {
-    return kIsWeb
+    return isWeb
         ? 0
         : path.hashCode ^
             name.hashCode ^
@@ -104,6 +106,6 @@ class PlatformFile {
 
   @override
   String toString() {
-    return 'PlatformFile(${kIsWeb ? '' : 'path $path'}, name: $name, bytes: $bytes, readStream: $readStream, size: $size)';
+    return 'PlatformFile(${isWeb ? '' : 'path $path'}, name: $name, bytes: $bytes, readStream: $readStream, size: $size)';
   }
 }
