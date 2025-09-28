@@ -156,6 +156,36 @@ class PlatformFile {
         'File must have either a valid path (non-web), bytes, or readStream.');
   }
 
+  /// Checks if the file exists.
+  ///
+  /// The exists method checks file existence based on available data:
+  /// - If [path] is available and not web: checks if the file exists at the given path
+  /// - If [bytes] is available: returns true (data exists in memory)
+  /// - If [readStream] is available: returns true (stream data exists)
+  /// - If none are available: returns false
+  ///
+  /// Returns a [Future<bool>] indicating whether the file exists.
+  Future<bool> exists() async {
+    // Strategy 1: Check file path if available (most reliable for non-web)
+    if (!isWeb && _path != null) {
+      final file = File(_path!);
+      return await file.exists();
+    }
+
+    // Strategy 2: Check if bytes are available
+    if (bytes != null) {
+      return true; // Data exists in memory
+    }
+
+    // Strategy 3: Check if readStream is available
+    if (readStream != null) {
+      return true; // Stream data exists
+    }
+
+    // No valid data source available
+    return false;
+  }
+
   @override
   String toString() {
     return 'PlatformFile(${isWeb ? '' : 'path $path'}, name: $name, bytes: $bytes, readStream: $readStream, size: $size)';

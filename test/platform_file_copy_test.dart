@@ -184,4 +184,169 @@ void main() {
       expect(await copiedFile.readAsString(), equals(bytesContent));
     });
   });
+
+  group('PlatformFile exists method tests', () {
+    late Directory tempDir;
+
+    setUpAll(() async {
+      tempDir =
+          await Directory.systemTemp.createTemp('platform_file_exists_test_');
+    });
+
+    tearDownAll(() async {
+      await tempDir.delete(recursive: true);
+    });
+
+    test('exists with valid file path', () async {
+      // Create a test file
+      final testFile = File('${tempDir.path}/existing_file.txt');
+      await testFile.writeAsString('test content');
+
+      // Create PlatformFile with path
+      final platformFile = PlatformFile(
+        path: testFile.path,
+        name: 'existing_file.txt',
+        size: 12,
+      );
+
+      // Check if file exists
+      expect(await platformFile.exists(), isTrue);
+    });
+
+    test('exists with non-existent file path', () async {
+      // Create PlatformFile with non-existent path
+      final platformFile = PlatformFile(
+        path: '${tempDir.path}/non_existent_file.txt',
+        name: 'non_existent_file.txt',
+        size: 0,
+      );
+
+      // Check if file exists
+      expect(await platformFile.exists(), isFalse);
+    });
+
+    test('exists with bytes data', () async {
+      const content = 'Test content for exists check';
+      final bytes = Uint8List.fromList(content.codeUnits);
+
+      // Create PlatformFile with bytes
+      final platformFile = PlatformFile(
+        name: 'bytes_file.txt',
+        size: bytes.length,
+        bytes: bytes,
+      );
+
+      // Check if file exists (should return true for bytes)
+      expect(await platformFile.exists(), isTrue);
+    });
+
+    test('exists with readStream', () async {
+      const content = 'Test content for stream exists check';
+      final bytes = Uint8List.fromList(content.codeUnits);
+      final stream = Stream<List<int>>.fromIterable([bytes]);
+
+      // Create PlatformFile with readStream
+      final platformFile = PlatformFile(
+        name: 'stream_file.txt',
+        size: bytes.length,
+        readStream: stream,
+      );
+
+      // Check if file exists (should return true for stream)
+      expect(await platformFile.exists(), isTrue);
+    });
+
+    test('exists with web platform (no path)', () async {
+      const content = 'Web platform exists test';
+      final bytes = Uint8List.fromList(content.codeUnits);
+
+      // Create PlatformFile for web (isWeb = true)
+      final platformFile = PlatformFile(
+        name: 'web_file.txt',
+        size: bytes.length,
+        bytes: bytes,
+        isWeb: true,
+      );
+
+      // Check if file exists (should return true for bytes)
+      expect(await platformFile.exists(), isTrue);
+    });
+
+    test('exists with no data source', () async {
+      // Create PlatformFile with no data source
+      final platformFile = PlatformFile(
+        name: 'empty_file.txt',
+        size: 0,
+      );
+
+      // Check if file exists (should return false)
+      expect(await platformFile.exists(), isFalse);
+    });
+
+    test('exists prioritizes path check over bytes', () async {
+      // Create a test file
+      final testFile = File('${tempDir.path}/priority_exists_file.txt');
+      await testFile.writeAsString('file content');
+
+      const bytesContent = 'bytes content';
+      final bytes = Uint8List.fromList(bytesContent.codeUnits);
+
+      // Create PlatformFile with both path and bytes
+      final platformFile = PlatformFile(
+        path: testFile.path,
+        name: 'priority_exists_file.txt',
+        size: 12,
+        bytes: bytes,
+      );
+
+      // Should check file existence at path (not just bytes availability)
+      expect(await platformFile.exists(), isTrue);
+
+      // Delete the file and check again
+      await testFile.delete();
+      expect(await platformFile.exists(), isFalse);
+    });
+
+    test('exists prioritizes bytes over readStream', () async {
+      const bytesContent = 'bytes content';
+      final bytes = Uint8List.fromList(bytesContent.codeUnits);
+
+      const streamContent = 'stream content';
+      final streamBytes = Uint8List.fromList(streamContent.codeUnits);
+      final stream = Stream<List<int>>.fromIterable([streamBytes]);
+
+      // Create PlatformFile with both bytes and readStream
+      final platformFile = PlatformFile(
+        name: 'priority_exists_file2.txt',
+        size: bytes.length,
+        bytes: bytes,
+        readStream: stream,
+      );
+
+      // Should return true because bytes are available
+      expect(await platformFile.exists(), isTrue);
+    });
+
+    test('exists with deleted file after creation', () async {
+      // Create a test file
+      final testFile = File('${tempDir.path}/deleted_file.txt');
+      await testFile.writeAsString('test content');
+
+      // Create PlatformFile with path
+      final platformFile = PlatformFile(
+        path: testFile.path,
+        name: 'deleted_file.txt',
+        size: 12,
+      );
+
+      // Check if file exists (should be true)
+      expect(await platformFile.exists(), isTrue);
+
+      // Delete the file
+      await testFile.delete();
+
+      // Check if file exists (should be false)
+      expect(await platformFile.exists(), isFalse);
+    });
+  });
 }
