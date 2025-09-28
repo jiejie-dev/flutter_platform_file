@@ -4,6 +4,7 @@ library platform_file;
 import 'dart:async';
 // ignore: unnecessary_import
 import 'dart:typed_data';
+import 'dart:io';
 
 class PlatformFile {
   PlatformFile({
@@ -102,6 +103,57 @@ class PlatformFile {
             readStream.hashCode ^
             identifier.hashCode ^
             size.hashCode;
+  }
+
+  /// Copies this file to the specified target path.
+  ///
+  /// The copy method intelligently chooses the best copying strategy based on available data:
+  /// - If [path] is available and not web: uses File.copy() for efficient file system copy
+  /// - If [bytes] is available: writes bytes directly to target file
+  /// - If [readStream] is available: streams data to target file
+  /// - If none are available: throws StateError
+  ///
+  /// Returns a [Future<File>] representing the copied file.
+  ///
+  /// Throws:
+  /// - [StateError] if no valid data source is available
+  /// - [FileSystemException] if the copy operation fails
+  Future<File> copy(String targetPath) async {
+    // Ensure target directory exists
+    final targetFile = File(targetPath);
+    await targetFile.parent.create(recursive: true);
+
+    // Strategy 1: Use file path if available (most efficient for non-web)
+    if (!isWeb && _path != null) {
+      final sourceFile = File(_path!);
+      if (await sourceFile.exists()) {
+        return await sourceFile.copy(targetPath);
+      }
+    }
+
+    // Strategy 2: Use bytes if available
+    if (bytes != null) {
+      await targetFile.writeAsBytes(bytes!);
+      return targetFile;
+    }
+
+    // Strategy 3: Use readStream if available
+    if (readStream != null) {
+      final sink = targetFile.openWrite();
+      try {
+        await for (final chunk in readStream!) {
+          sink.add(chunk);
+        }
+        await sink.flush();
+      } finally {
+        await sink.close();
+      }
+      return targetFile;
+    }
+
+    // No valid data source available
+    throw StateError('Cannot copy file: no valid data source available. '
+        'File must have either a valid path (non-web), bytes, or readStream.');
   }
 
   @override
