@@ -1,13 +1,14 @@
 name: platform_file
+resolution: workspace
 description: An abstraction to allow working with files across multiple platforms.
 version: 0.1.0
 homepage: https://github.com/jiejie-dev/flutter_platform_file
 
 environment:
-  sdk: ">=2.18.4 <4.0.0"
+  sdk: ">=3.9.2 <4.0.0"
 
 dependencies:
   test: ^1.25.15
 
 dev_dependencies:
-  lints: ^2.0.0
+  lints: ^6.0.0
