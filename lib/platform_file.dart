@@ -15,21 +15,41 @@ class PlatformFile {
     this.readStream,
     this.identifier,
     this.isWeb = false,
-  }) : _path = path;
+  })  : _path = path,
+        assert(
+          path != null || bytes != null || readStream != null,
+          'At least one data source (path, bytes, or readStream) must be provided.',
+        );
 
-  factory PlatformFile.fromMap(Map data, {Stream<List<int>>? readStream}) {
+  factory PlatformFile.fromMap(Map<String, dynamic> data,
+      {Stream<List<int>>? readStream}) {
+    final name = data['name'];
+    final size = data['size'];
+
+    if (name is! String) {
+      throw ArgumentError.value(name, 'name', 'must be a non-null String');
+    }
+    if (size is! int) {
+      throw ArgumentError.value(size, 'size', 'must be a non-null int');
+    }
+
+    final bytes = data['bytes'];
+    if (bytes != null && bytes is! Uint8List) {
+      throw ArgumentError.value(bytes, 'bytes', 'must be a Uint8List or null');
+    }
+
     return PlatformFile(
-      name: data['name'],
-      path: data['path'],
-      bytes: data['bytes'],
-      size: data['size'],
-      identifier: data['identifier'],
+      name: name,
+      path: data['path'] as String?,
+      bytes: bytes as Uint8List?,
+      size: size,
+      identifier: data['identifier'] as String?,
       readStream: readStream,
-      isWeb: data['isWeb'] ?? false,
+      isWeb: (data['isWeb'] as bool?) ?? false,
     );
   }
 
-  bool isWeb = false;
+  final bool isWeb;
 
   /// The absolute path for a cached copy of this file. It can be used to create a
   /// file instance with a descriptor for the given path.
@@ -38,16 +58,16 @@ class PlatformFile {
   /// ```
   /// On web this is always `null`. You should access `bytes` property instead.
   /// Read more about it [here](https://github.com/miguelpruivo/flutter_file_picker/wiki/FAQ)
-  String? _path;
+  final String? _path;
 
   String? get path {
     if (isWeb) {
       /// https://github.com/miguelpruivo/flutter_file_picker/issues/751
-      throw '''
-      On web `path` is always `null`,
-      You should access `bytes` property instead,
-      Read more about it [here](https://github.com/miguelpruivo/flutter_file_picker/wiki/FAQ)
-      ''';
+      throw UnsupportedError(
+        'On web `path` is always `null`. '
+        'You should access `bytes` property instead. '
+        'Read more about it: https://github.com/miguelpruivo/flutter_file_picker/wiki/FAQ',
+      );
     }
     return _path;
   }
@@ -61,6 +81,10 @@ class PlatformFile {
   final Uint8List? bytes;
 
   /// File content as stream
+  ///
+  /// Note: A regular [Stream] can only be listened to once. If you call [copy]
+  /// using the stream strategy, subsequent calls will fail. Consider providing
+  /// [bytes] instead if you need to read the data multiple times.
   final Stream<List<int>>? readStream;
 
   /// The file size in bytes. Defaults to `0` if the file size could not be
@@ -75,8 +99,14 @@ class PlatformFile {
   /// that the [path] property should be used instead.
   final String? identifier;
 
-  /// File extension for this file.
-  String? get extension => name.split('.').last;
+  /// File extension for this file, or `null` if the file has no extension.
+  String? get extension {
+    final dotIndex = name.lastIndexOf('.');
+    if (dotIndex <= 0) return null;
+    return name.substring(dotIndex + 1);
+  }
+
+  bool get _hasPath => !isWeb && _path != null;
 
   @override
   bool operator ==(Object other) {
@@ -84,9 +114,13 @@ class PlatformFile {
       return true;
     }
 
-    return other is PlatformFile &&
-        (isWeb || other.path == path) &&
-        other.name == name &&
+    if (other is! PlatformFile) return false;
+
+    if (isWeb != other.isWeb) return false;
+
+    if (!isWeb && _path != other._path) return false;
+
+    return other.name == name &&
         other.bytes == bytes &&
         other.readStream == readStream &&
         other.identifier == identifier &&
@@ -95,14 +129,15 @@ class PlatformFile {
 
   @override
   int get hashCode {
-    return isWeb
-        ? 0
-        : path.hashCode ^
-            name.hashCode ^
-            bytes.hashCode ^
-            readStream.hashCode ^
-            identifier.hashCode ^
-            size.hashCode;
+    return Object.hash(
+      isWeb,
+      isWeb ? null : _path,
+      name,
+      bytes,
+      readStream,
+      identifier,
+      size,
+    );
   }
 
   /// Copies this file to the specified target path.
@@ -119,25 +154,21 @@ class PlatformFile {
   /// - [StateError] if no valid data source is available
   /// - [FileSystemException] if the copy operation fails
   Future<File> copy(String targetPath) async {
-    // Ensure target directory exists
     final targetFile = File(targetPath);
     await targetFile.parent.create(recursive: true);
 
-    // Strategy 1: Use file path if available (most efficient for non-web)
-    if (!isWeb && _path != null) {
+    if (_hasPath) {
       final sourceFile = File(_path!);
       if (await sourceFile.exists()) {
         return await sourceFile.copy(targetPath);
       }
     }
 
-    // Strategy 2: Use bytes if available
     if (bytes != null) {
       await targetFile.writeAsBytes(bytes!);
       return targetFile;
     }
 
-    // Strategy 3: Use readStream if available
     if (readStream != null) {
       final sink = targetFile.openWrite();
       try {
@@ -151,43 +182,33 @@ class PlatformFile {
       return targetFile;
     }
 
-    // No valid data source available
     throw StateError('Cannot copy file: no valid data source available. '
         'File must have either a valid path (non-web), bytes, or readStream.');
   }
 
-  /// Checks if the file exists.
+  /// Checks if the file has accessible data.
   ///
-  /// The exists method checks file existence based on available data:
-  /// - If [path] is available and not web: checks if the file exists at the given path
+  /// - If [path] is available and not web: checks if the file exists at the given path;
+  ///   if not, falls through to check [bytes] and [readStream].
   /// - If [bytes] is available: returns true (data exists in memory)
   /// - If [readStream] is available: returns true (stream data exists)
   /// - If none are available: returns false
-  ///
-  /// Returns a [Future<bool>] indicating whether the file exists.
   Future<bool> exists() async {
-    // Strategy 1: Check file path if available (most reliable for non-web)
-    if (!isWeb && _path != null) {
+    if (_hasPath) {
       final file = File(_path!);
-      return await file.exists();
+      if (await file.exists()) return true;
     }
 
-    // Strategy 2: Check if bytes are available
-    if (bytes != null) {
-      return true; // Data exists in memory
-    }
+    if (bytes != null) return true;
 
-    // Strategy 3: Check if readStream is available
-    if (readStream != null) {
-      return true; // Stream data exists
-    }
+    if (readStream != null) return true;
 
-    // No valid data source available
     return false;
   }
 
   @override
   String toString() {
-    return 'PlatformFile(${isWeb ? '' : 'path $path'}, name: $name, bytes: $bytes, readStream: $readStream, size: $size)';
+    final pathPart = isWeb ? 'web' : 'path: $_path';
+    return 'PlatformFile($pathPart, name: $name, bytes: ${bytes != null ? '${bytes!.length} bytes' : 'null'}, readStream: ${readStream != null ? 'present' : 'null'}, size: $size)';
   }
 }
