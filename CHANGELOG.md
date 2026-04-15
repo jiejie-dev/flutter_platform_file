@@ -1,3 +1,7 @@
+## 0.1.1+1
+
+ - **FIX**(platform_file): 修复相等性/哈希/空值校验等多个 BUG 并补全单元测试.
+
 ## 0.1.1
 
  - **FIX**(README): Fix bad badge link.
