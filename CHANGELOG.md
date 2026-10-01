@@ -1,3 +1,7 @@
+## 0.1.1+3
+
+ - **DOCS**(platform_file): 补齐文档目录分层.
+
 ## 0.1.1+2
 
  - **DOCS**(platform_file): 补齐文档目录分层.
